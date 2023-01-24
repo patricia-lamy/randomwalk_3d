@@ -133,4 +133,4 @@ print('Time elapsed (s):', end - start)
 # Saving the information
 df = pd.DataFrame({'#Fpt': fpt_list,
                    '#Exit point (0:hya and 1:ilm)': exit_point})
-df.to_csv("fpt_array_geom0.1_24-01-2023_deltat0.01.csv", index=False)
+df.to_csv("data/fpt_array_geom0.1_24-01-2023_deltat0.01.csv", index=False)
