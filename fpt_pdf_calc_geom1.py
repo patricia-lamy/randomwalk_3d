@@ -11,8 +11,7 @@ sphere_radius = 1.02       # Sphere radius, also domain size (cm)
 diff_coef = 3.852e-3       # Diffusion coefficient (cm2/h)
 
 # Angle (rad) defining the lens radius (from the top of the geometry):
-phi_lens = np.pi - 2.6
-#phi_lens = 0   #Temporary for Geom0
+phi_lens = np.pi - 2.6  # =0 if Geom 0
 
 # Angle (rad) defining the intersection of the hyaloid membrane with the ILM
 # (from the top of the geometry):
@@ -28,7 +27,7 @@ perm_param_hya = 1
 # Initialisation for simulations
 n_particles = 10000  # Number of simulations
 time_max = 1500  # Time (in h) when the simulation stops
-delta_t = 0.001  # Time step length (h)
+delta_t = 0.01  # Time step length (h)
 
 # Corresponding variables for the simulation (do not change)
 max_time_steps = int(time_max/delta_t)   # Nb of max time steps in simulation.
@@ -52,9 +51,6 @@ fpt_list = np.empty(n_particles)
 # If not exited: nan
 exit_point = np.empty(n_particles)
 
-#Temporary thing
-#t_list = []
-
 start = time.time()
 for i in range(n_particles):
     # Initial position of particle
@@ -64,7 +60,6 @@ for i in range(n_particles):
 
     # Setting time step counter to first time step
     t = delta_t
-    t_index = 1
 
     while t < time_max:
         # Sampling random angles for variation of theta and phi
@@ -116,15 +111,13 @@ for i in range(n_particles):
                     rhot = sphere_radius  # Effectively a reflective boundary
                 else:  # If absorbed
                     fpt_list[i] = t  # Record fpt in the list for particle i
-                    exit_point[i] = 1  # Records that the particle exited through ilm
+                    exit_point[i] = 1  # Records that particle exited via ilm
                     break
             else:
                 print('shouldnt come here')
 
         # Resetting indexes
         t = round(t+delta_t, 10)
-        t_index += 1
-        #t_list.append(t)
         rho = rhot
         theta = thetat
         phi = phit
@@ -140,13 +133,4 @@ print('Time elapsed (s):', end - start)
 # Saving the information
 df = pd.DataFrame({'#Fpt': fpt_list,
                    '#Exit point (0:hya and 1:ilm)': exit_point})
-df.to_csv("fpt_array_geom0.1_23-01-2023_deltat0.001.csv", index=False)
-
-#df_time = pd.DataFrame({'Time points': t_list})
-#df_time.to_csv("time_array_geom0_20-01-2023_tests.csv", index=False)
-
-
-#np.savetxt("fpt_array_geom1_0.01deltat_02-12-22.csv", fpt_list, delimiter=",",
-#header='First passage time (in hours) for off-lattice random walk simulation
-#on Geometry 1 (reflectice boundary condition on lens surface),
-#with delta_t = 0.01 hours.')
+df.to_csv("fpt_array_geom0.1_24-01-2023_deltat0.01.csv", index=False)
