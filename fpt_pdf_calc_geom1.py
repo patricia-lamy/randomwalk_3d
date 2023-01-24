@@ -25,7 +25,7 @@ perm_param_ilm = 1
 perm_param_hya = 1
 
 # Initialisation for simulations
-n_particles = 10000  # Number of simulations
+n_particles = 10  # Number of simulations
 time_max = 1500  # Time (in h) when the simulation stops
 delta_t = 0.01  # Time step length (h)
 
@@ -45,6 +45,12 @@ phi0 = 0
 # Initialisation of array collecting the first passage times
 fpt_list = np.empty(n_particles)
 
+# Initialisation of arrays collecting positions for each particle
+rho_list = np.ndarray(shape=(n_particles, max_time_steps))
+theta_list = np.ndarray(shape=(n_particles, max_time_steps))
+phi_list = np.ndarray(shape=(n_particles, max_time_steps))
+
+
 # Initialisation of array collecting membrane where particle exited
 # If exited through hya: 0
 # If exited through ilm: 1
@@ -53,13 +59,22 @@ exit_point = np.empty(n_particles)
 
 start = time.time()
 for i in range(n_particles):
+    # Initialising list of positions for new particle
+    rho_list_i = np.empty(max_time_steps)   # Array of the radial distances visited
+    theta_list_i = np.empty(max_time_steps)   # Array of the azimuthal angles visited
+    phi_list_i = np.empty(max_time_steps)   # Array of the polar angles visited
+
     # Initial position of particle
     rho = rho0
     theta = theta0
     phi = phi0
+    rho_list_i[0] = rho0
+    theta_list_i[0] = theta0
+    phi_list_i[0] = phi0
 
     # Setting time step counter to first time step
     t = delta_t
+    t_index = 1
 
     while t < time_max:
         # Sampling random angles for variation of theta and phi
@@ -96,28 +111,51 @@ for i in range(n_particles):
                 random_num = np.random.uniform()
                 if random_num >= prob_absorb_hya:
                     print('shouldnt be here1')
-                    # We suppose the particle did not move (BBC)
-                    rhot = rho
-                    thetat = theta
-                    phit = phi
+                    # Add reflective boundary condition
                 else:  # If absorbed
                     fpt_list[i] = t  # Record fpt in the list for particle i
                     exit_point[i] = 0  # Records particle exited through hya
+                    # Record last position before exiting as position on sphere
+                    rho_list_i[t_index] = sphere_radius
+                    theta_list_i[t_index] = thetat
+                    phi_list_i[t_index] = phit
+                    # We truncate the arrays containing the positions of the
+                    # particle (stop recording):
+                    for t_after in range(t_index+1, max_time_steps):
+                        rho_list_i[t_after] = np.nan
+                        theta_list_i[t_after] = np.nan
+                        phi_list_i[t_after] = np.nan
                     break
             elif phit > phi_ilm:  # Region of ILM
                 random_num = np.random.uniform()
                 if random_num >= perm_param_ilm:
                     print('shouldnt be here2')
-                    rhot = sphere_radius  # Effectively a reflective boundary
+                    # Add reflective boundary condition
                 else:  # If absorbed
                     fpt_list[i] = t  # Record fpt in the list for particle i
                     exit_point[i] = 1  # Records that particle exited via ilm
+                    # Record last position before exiting as position on sphere
+                    rho_list_i[t_index] = sphere_radius
+                    theta_list_i[t_index] = thetat
+                    phi_list_i[t_index] = phit
+                    # We truncate the arrays containing the positions of the
+                    # particle (stop recording):
+                    for t_after in range(t_index+1, max_time_steps):
+                        rho_list_i[t_after] = np.nan
+                        theta_list_i[t_after] = np.nan
+                        phi_list_i[t_after] = np.nan
                     break
             else:
                 print('shouldnt come here')
 
+        # Recording position
+        rho_list_i[t_index] = rhot
+        theta_list_i[t_index] = thetat
+        phi_list_i[t_index] = phit
+
         # Resetting indexes
         t = round(t+delta_t, 10)
+        t_index = t_index + 1
         rho = rhot
         theta = thetat
         phi = phit
@@ -125,6 +163,11 @@ for i in range(n_particles):
     else:  # If we reach max time step before particle exited
         fpt_list[i] = np.nan
         exit_point[i] = np.nan
+
+    # Recording this before the simulation of next particle
+    rho_list[i, :] = rho_list_i
+    theta_list[i, :] = theta_list_i
+    phi_list[i, :] = phi_list_i
 
 end = time.time()
 print('Time elapsed (s):', end - start)
@@ -134,3 +177,12 @@ print('Time elapsed (s):', end - start)
 df = pd.DataFrame({'#Fpt': fpt_list,
                    '#Exit point (0:hya and 1:ilm)': exit_point})
 df.to_csv("data/fpt_array_geom0.1_24-01-2023_deltat0.01.csv", index=False)
+
+for i in range(0, len(fpt_list)):
+    df_positions = pd.DataFrame({'#Rho': rho_list[i],
+                                 '#Theta': theta_list[i],
+                                 '#Phi': phi_list[i]})
+    df_positions.dropna(inplace=True)
+    df_positions.to_csv('data/particle'+f'{i+1}' +
+                        '_positions_geom0.1_24-01-2023')
+    del df_positions
