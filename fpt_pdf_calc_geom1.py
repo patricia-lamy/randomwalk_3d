@@ -7,8 +7,8 @@ from fpt_calc_methods import reflect
 # np.random.seed(42)
 
 # Parameters for outputs wanted
-n_particles = 10000  # Number of simulations
-record_positions = False
+n_particles = 30  # Number of simulations
+record_positions = True
 
 # Setting the conditions of the problem.
 sphere_radius = 1.02       # Sphere radius, also domain size (cm)
@@ -30,7 +30,7 @@ perm_param_hya = 1
 
 # Initialisation for simulations
 time_max = 1500  # Time (in h) when the simulation stops
-delta_t = 0.02  # Time step length (h)
+delta_t = 0.01  # Time step length (h)
 
 # Corresponding variables for the simulation (do not change)
 max_time_steps = int(time_max/delta_t)   # Nb of max time steps in simulation.
@@ -99,7 +99,7 @@ for i in range(n_particles):
 
         # Calculating the corresponding spherical position particle at time t
         rhot = np.sqrt(xt**2 + yt**2 + zt**2 + 1e-14)
-        thetat = np.arctan2(yt, xt) + np.pi
+        thetat = np.arctan2(yt, xt)
         phit = np.arccos(zt/rhot)
 
         if rhot > sphere_radius:  # If the particle hits the boundary at time t
@@ -108,6 +108,7 @@ for i in range(n_particles):
                                                (rhot, thetat, phit),
                                                sphere_radius)
             elif phi_lens <= phit <= phi_ilm:  # Region of hyaloid membrane
+                print('shoulnt be here')
                 random_num = np.random.uniform()
                 if random_num >= prob_absorb_hya:  # Reflected
                     [rhot, thetat, phit] = reflect((rho, theta, phi),
@@ -185,9 +186,9 @@ df.to_csv("data/fpt_array_geomB_25-01-2023_deltat0.02.csv", index=False)
 
 if record_positions:
     for i in range(0, len(fpt_list)):
-        df_positions = pd.DataFrame({'#Rho': rho_list[i],
-                                     '#Theta': theta_list[i],
-                                     '#Phi': phi_list[i]})
+        df_positions = pd.DataFrame({'Rho': rho_list[i],
+                                     'Theta': theta_list[i],
+                                     'Phi': phi_list[i]})
         df_positions.dropna(inplace=True)
         df_positions.to_csv('data/positions/particle'+f'{i+1}' +
                             '_positions_geomB_25-01-2023.csv')

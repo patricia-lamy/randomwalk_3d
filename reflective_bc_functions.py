@@ -1,5 +1,5 @@
 import numpy as np
-import sys
+# import sys
 
 
 def sph2cart(rho, theta, phi):
@@ -7,7 +7,7 @@ def sph2cart(rho, theta, phi):
 
     Args:
         rho (float): Radial distance (>= 0)
-        theta (float): Azimuthal angle (in [0, 2pi])
+        theta (float): Azimuthal angle (in [-pi, pi])
         phi (float): Polar angle (in [0, pi])
 
     Returns:
@@ -28,17 +28,12 @@ def cart2sph(x, y, z):
     Returns:
         The point (rho, theta, phi), where
             rho (float): Radial distance (>= 0)
-            theta (float): Azimuthal angle (in [0, 2pi])
+            theta (float): Azimuthal angle (in [-pi, pi])
             phi (float): Polar angle (in [0, pi])
     """
     rho = np.sqrt(x**2 + y**2 + z**2)
-    theta = np.arctan2(y, (x+1e-16)) + np.pi
+    theta = np.arctan2(y, (x+1e-16))
     phi = np.arccos((z + 1e-16)/(rho + 1e-16))
-    if rho < 0 or theta < 0 or phi < 0:
-        print('Rho:', rho)
-        print('Theta:', theta)
-        print('Phi:', phi)
-        sys.exit("Negative value of rho or theta or phi")
     return (rho, theta, phi)
 
 

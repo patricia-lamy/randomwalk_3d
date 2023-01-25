@@ -1,5 +1,5 @@
 from reflective_bc_functions import reflected_point_method_sph
-import sys
+# import sys
 
 
 def reflect(initial_pt, end_of_step_point, radius):
@@ -26,11 +26,6 @@ def reflect(initial_pt, end_of_step_point, radius):
     # If reflected point not inside the boundary (the sphere), we place it on
     # sphere
     if rho3 >= radius:
-        if rho3 > 1.03:
-            print('Initial pt:', [rho1, theta1, phi1])
-            print('End of step pt:', [rho2, theta2, phi2])
-            print('Reflected point:', [rho3, theta3, phi3])
-            sys.exit('Reflected point farther than what it should')
-        else:
-            rho3 = radius
+        print('Reflected point outside of sphere (second reflection needed)')
+        rho3 = radius
     return [rho3, theta3, phi3]
