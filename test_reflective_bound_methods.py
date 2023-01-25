@@ -7,6 +7,11 @@ from reflective_bc_functions import distance_between_2points
 
 class TestingReflectiveBoundaryMethods(unittest.TestCase):
 
+    def test_valid_coordinates(self):
+        # Add test to validate that new coordinates of points are within
+        # expected range
+        pass
+
     def test_total_distance(self):
         np.random.seed(41)
         r = 1.02
@@ -22,7 +27,7 @@ class TestingReflectiveBoundaryMethods(unittest.TestCase):
         p2_sph = cart2sph(p2_cart[0], p2_cart[1], p2_cart[2])
         self.assertTrue(p2_sph[0] > r)
         pc = collision_point_method(p1_cart, p2_cart, r)
-        p3_cart = reflected_point_method(p1_cart, p2_cart, r)
+        p3_cart = reflected_point_method(p1_cart, p2_cart, r)[0]
         dist = (distance_between_2points(p1_cart, pc)
                 + distance_between_2points(pc, p3_cart))
         self.assertAlmostEqual(dist, step_length)

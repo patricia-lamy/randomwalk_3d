@@ -1,10 +1,14 @@
 import numpy as np
 import pandas as pd
 import time
-from reflective_bc_functions import reflected_point_method_sph
+from fpt_calc_methods import reflect
 
 # We set the random seed
 # np.random.seed(42)
+
+# Parameters for outputs wanted
+n_particles = 10000  # Number of simulations
+record_positions = False
 
 # Setting the conditions of the problem.
 sphere_radius = 1.02       # Sphere radius, also domain size (cm)
@@ -25,9 +29,8 @@ perm_param_ilm = 1
 perm_param_hya = 1
 
 # Initialisation for simulations
-n_particles = 10  # Number of simulations
 time_max = 1500  # Time (in h) when the simulation stops
-delta_t = 0.01  # Time step length (h)
+delta_t = 0.02  # Time step length (h)
 
 # Corresponding variables for the simulation (do not change)
 max_time_steps = int(time_max/delta_t)   # Nb of max time steps in simulation.
@@ -46,9 +49,10 @@ phi0 = 0
 fpt_list = np.empty(n_particles)
 
 # Initialisation of arrays collecting positions for each particle
-rho_list = np.ndarray(shape=(n_particles, max_time_steps))
-theta_list = np.ndarray(shape=(n_particles, max_time_steps))
-phi_list = np.ndarray(shape=(n_particles, max_time_steps))
+if record_positions:
+    rho_list = np.ndarray(shape=(n_particles, max_time_steps))
+    theta_list = np.ndarray(shape=(n_particles, max_time_steps))
+    phi_list = np.ndarray(shape=(n_particles, max_time_steps))
 
 
 # Initialisation of array collecting membrane where particle exited
@@ -60,17 +64,20 @@ exit_point = np.empty(n_particles)
 start = time.time()
 for i in range(n_particles):
     # Initialising list of positions for new particle
-    rho_list_i = np.empty(max_time_steps)   # Array of the radial distances visited
-    theta_list_i = np.empty(max_time_steps)   # Array of the azimuthal angles visited
-    phi_list_i = np.empty(max_time_steps)   # Array of the polar angles visited
+    if record_positions:
+        rho_list_i = np.empty(max_time_steps)   # Array of radial distances
+        theta_list_i = np.empty(max_time_steps)   # Array of azimuthal angles
+        phi_list_i = np.empty(max_time_steps)   # Array of polar angles visited
 
     # Initial position of particle
     rho = rho0
     theta = theta0
     phi = phi0
-    rho_list_i[0] = rho0
-    theta_list_i[0] = theta0
-    phi_list_i[0] = phi0
+
+    if record_positions:
+        rho_list_i[0] = rho0
+        theta_list_i[0] = theta0
+        phi_list_i[0] = phi0
 
     # Setting time step counter to first time step
     t = delta_t
@@ -92,39 +99,34 @@ for i in range(n_particles):
 
         # Calculating the corresponding spherical position particle at time t
         rhot = np.sqrt(xt**2 + yt**2 + zt**2 + 1e-14)
-        thetat = np.arctan2(yt, xt)
+        thetat = np.arctan2(yt, xt) + np.pi
         phit = np.arccos(zt/rhot)
 
         if rhot > sphere_radius:  # If the particle hits the boundary at time t
             if phit < phi_lens:  # Lens region
-                reflected_point = reflected_point_method_sph((rho, theta, phi),
-                                                             (rhot, thetat,
-                                                              phit),
-                                                             sphere_radius)
-                rhot = reflected_point[0]
-                thetat = reflected_point[1]
-                phit = reflected_point[2]
-                if rhot >= sphere_radius:
-                    print('New point not in sphere, rho =', rhot)
-                    rhot = sphere_radius
+                [rhot, thetat, phit] = reflect((rho, theta, phi),
+                                               (rhot, thetat, phit),
+                                               sphere_radius)
             elif phi_lens <= phit <= phi_ilm:  # Region of hyaloid membrane
                 random_num = np.random.uniform()
-                if random_num >= prob_absorb_hya:
-                    print('shouldnt be here1')
-                    # Add reflective boundary condition
-                else:  # If absorbed
+                if random_num >= prob_absorb_hya:  # Reflected
+                    [rhot, thetat, phit] = reflect((rho, theta, phi),
+                                                   (rhot, thetat, phit),
+                                                   sphere_radius)
+                else:   # Absorbed
                     fpt_list[i] = t  # Record fpt in the list for particle i
                     exit_point[i] = 0  # Records particle exited through hya
                     # Record last position before exiting as position on sphere
-                    rho_list_i[t_index] = sphere_radius
-                    theta_list_i[t_index] = thetat
-                    phi_list_i[t_index] = phit
-                    # We truncate the arrays containing the positions of the
-                    # particle (stop recording):
-                    for t_after in range(t_index+1, max_time_steps):
-                        rho_list_i[t_after] = np.nan
-                        theta_list_i[t_after] = np.nan
-                        phi_list_i[t_after] = np.nan
+                    if record_positions:
+                        rho_list_i[t_index] = sphere_radius
+                        theta_list_i[t_index] = thetat
+                        phi_list_i[t_index] = phit
+                        # We truncate the arrays containing the positions of
+                        # the particle (stop recording):
+                        for t_after in range(t_index+1, max_time_steps):
+                            rho_list_i[t_after] = np.nan
+                            theta_list_i[t_after] = np.nan
+                            phi_list_i[t_after] = np.nan
                     break
             elif phit > phi_ilm:  # Region of ILM
                 random_num = np.random.uniform()
@@ -135,23 +137,25 @@ for i in range(n_particles):
                     fpt_list[i] = t  # Record fpt in the list for particle i
                     exit_point[i] = 1  # Records that particle exited via ilm
                     # Record last position before exiting as position on sphere
-                    rho_list_i[t_index] = sphere_radius
-                    theta_list_i[t_index] = thetat
-                    phi_list_i[t_index] = phit
-                    # We truncate the arrays containing the positions of the
-                    # particle (stop recording):
-                    for t_after in range(t_index+1, max_time_steps):
-                        rho_list_i[t_after] = np.nan
-                        theta_list_i[t_after] = np.nan
-                        phi_list_i[t_after] = np.nan
+                    if record_positions:
+                        rho_list_i[t_index] = sphere_radius
+                        theta_list_i[t_index] = thetat
+                        phi_list_i[t_index] = phit
+                        # We truncate the arrays containing the positions of
+                        # the particle (stop recording):
+                        for t_after in range(t_index+1, max_time_steps):
+                            rho_list_i[t_after] = np.nan
+                            theta_list_i[t_after] = np.nan
+                            phi_list_i[t_after] = np.nan
                     break
             else:
                 print('shouldnt come here')
 
         # Recording position
-        rho_list_i[t_index] = rhot
-        theta_list_i[t_index] = thetat
-        phi_list_i[t_index] = phit
+        if record_positions:
+            rho_list_i[t_index] = rhot
+            theta_list_i[t_index] = thetat
+            phi_list_i[t_index] = phit
 
         # Resetting indexes
         t = round(t+delta_t, 10)
@@ -165,9 +169,10 @@ for i in range(n_particles):
         exit_point[i] = np.nan
 
     # Recording this before the simulation of next particle
-    rho_list[i, :] = rho_list_i
-    theta_list[i, :] = theta_list_i
-    phi_list[i, :] = phi_list_i
+    if record_positions:
+        rho_list[i, :] = rho_list_i
+        theta_list[i, :] = theta_list_i
+        phi_list[i, :] = phi_list_i
 
 end = time.time()
 print('Time elapsed (s):', end - start)
@@ -176,13 +181,14 @@ print('Time elapsed (s):', end - start)
 # Saving the information
 df = pd.DataFrame({'#Fpt': fpt_list,
                    '#Exit point (0:hya and 1:ilm)': exit_point})
-df.to_csv("data/fpt_array_geom0.1_24-01-2023_deltat0.01.csv", index=False)
+df.to_csv("data/fpt_array_geomB_25-01-2023_deltat0.02.csv", index=False)
 
-for i in range(0, len(fpt_list)):
-    df_positions = pd.DataFrame({'#Rho': rho_list[i],
-                                 '#Theta': theta_list[i],
-                                 '#Phi': phi_list[i]})
-    df_positions.dropna(inplace=True)
-    df_positions.to_csv('data/particle'+f'{i+1}' +
-                        '_positions_geom0.1_24-01-2023')
-    del df_positions
+if record_positions:
+    for i in range(0, len(fpt_list)):
+        df_positions = pd.DataFrame({'#Rho': rho_list[i],
+                                     '#Theta': theta_list[i],
+                                     '#Phi': phi_list[i]})
+        df_positions.dropna(inplace=True)
+        df_positions.to_csv('data/positions/particle'+f'{i+1}' +
+                            '_positions_geomB_25-01-2023.csv')
+        del df_positions

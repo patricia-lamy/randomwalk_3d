@@ -1,4 +1,5 @@
 import numpy as np
+import sys
 
 
 def sph2cart(rho, theta, phi):
@@ -31,8 +32,13 @@ def cart2sph(x, y, z):
             phi (float): Polar angle (in [0, pi])
     """
     rho = np.sqrt(x**2 + y**2 + z**2)
-    theta = np.arctan2(y, (x+1e-16))
+    theta = np.arctan2(y, (x+1e-16)) + np.pi
     phi = np.arccos((z + 1e-16)/(rho + 1e-16))
+    if rho < 0 or theta < 0 or phi < 0:
+        print('Rho:', rho)
+        print('Theta:', theta)
+        print('Phi:', phi)
+        sys.exit("Negative value of rho or theta or phi")
     return (rho, theta, phi)
 
 
@@ -149,9 +155,11 @@ def reflected_point_method(initial_pt, end_of_step_pt, sphere_radius):
             been blocked by the reflective sphere, in the form (x, y, z).
         sphere_radius (float): Sphere radius defining the boundary condition.
 
-    Returns:
+    Returns: an array containing
         reflected_pt (tuple): Contains the cartesian coordinates of the point
             where the reflected particle stops, in the form (x, y, z).
+        collision_pt (tuple): Contains the cartesian coordinates of the
+            collision point.
 
     """
     step_length = distance_between_2points(initial_pt, end_of_step_pt)
@@ -168,7 +176,7 @@ def reflected_point_method(initial_pt, end_of_step_pt, sphere_radius):
     ref_y = image_pt[1] + translation_factor*(collision_pt[1] - image_pt[1])
     ref_z = image_pt[2] + translation_factor*(collision_pt[2] - image_pt[2])
     reflected_pt = (ref_x, ref_y, ref_z)
-    return reflected_pt
+    return [reflected_pt, collision_pt]
 
 
 def reflected_point_method_sph(initial_pt, end_of_step_pt, sphere_radius):
@@ -184,15 +192,19 @@ def reflected_point_method_sph(initial_pt, end_of_step_pt, sphere_radius):
             phi).
         sphere_radius (float): Sphere radius defining the boundary condition.
 
-    Returns:
+    Returns: an array containing
         reflected_pt (tuple): Contains the spherical coordinates of the point
             where the reflected particle stops, in the form (rho, theta, phi).
+        collision_pt (tuple): Contains spherical coordinates of collision
+            point that was part of the reflection.
 
     """
     initial_pt_cart = sph2cart(initial_pt[0], initial_pt[1], initial_pt[2])
     end_of_step_pt_cart = sph2cart(end_of_step_pt[0], end_of_step_pt[1],
                                    end_of_step_pt[2])
-    ref_pt_cart = reflected_point_method(initial_pt_cart, end_of_step_pt_cart,
-                                         sphere_radius)
+    [ref_pt_cart, coll_pt_cart] = reflected_point_method(initial_pt_cart,
+                                                         end_of_step_pt_cart,
+                                                         sphere_radius)
     ref_pt_sph = cart2sph(ref_pt_cart[0], ref_pt_cart[1], ref_pt_cart[2])
-    return ref_pt_sph
+    coll_pt_sph = cart2sph(coll_pt_cart[0], coll_pt_cart[1], coll_pt_cart[2])
+    return [ref_pt_sph, coll_pt_sph]
