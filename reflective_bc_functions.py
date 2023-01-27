@@ -32,9 +32,9 @@ def cart2sph(x, y, z):
             phi (float): Polar angle (in [0, pi])
     """
     rho = np.sqrt(x**2 + y**2 + z**2)
-    theta = np.arctan2(y, (x+1e-16))
-    phi = np.arccos((z + 1e-16)/(rho + 1e-16))
-    return (rho, theta, phi)
+    theta = np.arctan2(y, x)
+    phi = np.arccos(z/(rho + 1e-16))
+    return [rho, theta, phi]
 
 
 def collision_point_method(initial_pt, end_of_step_pt, sphere_radius):
@@ -55,21 +55,28 @@ def collision_point_method(initial_pt, end_of_step_pt, sphere_radius):
     """
     (x1, y1, z1) = (initial_pt[0], initial_pt[1], initial_pt[2])
     (x2, y2, z2) = (end_of_step_pt[0], end_of_step_pt[1], end_of_step_pt[2])
-    (rho1, theta1, phi1) = cart2sph(x1, y1, z1)
+    rho1 = np.sqrt(x1**2 + y1**2 + z1**2)
     alpha = 2*(x1*(x2 - x1) + y1*(y2 - y1) + z1*(z2 - z1))
     beta = (x2 - x1)**2 + (y2 - y1)**2 + (z2 - z1)**2
     potential_d1 = ((-alpha + np.sqrt(alpha**2 -
                      4*beta*(rho1**2 - sphere_radius**2))) / (2*beta))
     potential_d2 = ((-alpha - np.sqrt(alpha**2 -
                      4*beta*(rho1**2 - sphere_radius**2))) / (2*beta))
-    if np.abs(potential_d1) < np.abs(potential_d2):
-        d = potential_d1
-    else:
-        d = potential_d2
+    d = min(abs(potential_d1), abs(potential_d2))
     x_c = x1 + d*(x2 - x1)
     y_c = y1 + d*(y2 - y1)
     z_c = z1 + d*(z2 - z1)
-    return (x_c, y_c, z_c)
+
+    if not (((x1 <= x2) and (x1 <= x_c <= x2))
+            or ((x2 <= x1) and (x2 <= x_c <= x1))):
+        print('x1:', x1, 'x2:', x2, 'xc:', x_c, 'd:', d)
+        # print('Init point:', x1, y1, z1)
+        # print('Collision point:', x_c, y_c, z_c)
+        # print('End of step pt:', x2, y2, z2)
+    if round(np.sqrt(x_c**2 + y_c**2 + z_c**2), 8) != 1.02:
+        print('rhoc:', np.sqrt(x_c**2 + y_c**2 + z_c**2))
+        print('Collision point not on sphere')
+    return [x_c, y_c, z_c]
 
 
 def projected_point_method(initial_pt, collision_pt, sphere_radius):
@@ -171,7 +178,16 @@ def reflected_point_method(initial_pt, end_of_step_pt, sphere_radius):
     ref_y = image_pt[1] + translation_factor*(collision_pt[1] - image_pt[1])
     ref_z = image_pt[2] + translation_factor*(collision_pt[2] - image_pt[2])
     reflected_pt = (ref_x, ref_y, ref_z)
-    return [reflected_pt, collision_pt]
+
+    # We assert that the travelled distance corresponds to step length
+    total_dist = round(distance_between_2points(initial_pt, collision_pt)
+                       + distance_between_2points(collision_pt, reflected_pt),
+                       10)
+    step_length = round(step_length, 10)
+    error = 0
+    if total_dist != step_length:
+        error = 1
+    return [reflected_pt, collision_pt, error]
 
 
 def reflected_point_method_sph(initial_pt, end_of_step_pt, sphere_radius):
@@ -197,9 +213,9 @@ def reflected_point_method_sph(initial_pt, end_of_step_pt, sphere_radius):
     initial_pt_cart = sph2cart(initial_pt[0], initial_pt[1], initial_pt[2])
     end_of_step_pt_cart = sph2cart(end_of_step_pt[0], end_of_step_pt[1],
                                    end_of_step_pt[2])
-    [ref_pt_cart, coll_pt_cart] = reflected_point_method(initial_pt_cart,
+    [ref_pt_cart, coll_pt_cart, error] = reflected_point_method(initial_pt_cart,
                                                          end_of_step_pt_cart,
                                                          sphere_radius)
     ref_pt_sph = cart2sph(ref_pt_cart[0], ref_pt_cart[1], ref_pt_cart[2])
     coll_pt_sph = cart2sph(coll_pt_cart[0], coll_pt_cart[1], coll_pt_cart[2])
-    return [ref_pt_sph, coll_pt_sph]
+    return [ref_pt_sph, coll_pt_sph, error]

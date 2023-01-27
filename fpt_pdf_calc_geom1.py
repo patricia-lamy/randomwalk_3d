@@ -4,11 +4,12 @@ import time
 from fpt_calc_methods import reflect
 
 # We set the random seed
-# np.random.seed(42)
+np.random.seed(42)
 
 # Parameters for outputs wanted
-n_particles = 30  # Number of simulations
-record_positions = True
+n_particles = 10000  # Number of simulations
+record_positions = False
+record_collision_pt = False
 
 # Setting the conditions of the problem.
 sphere_radius = 1.02       # Sphere radius, also domain size (cm)
@@ -35,6 +36,7 @@ delta_t = 0.01  # Time step length (h)
 # Corresponding variables for the simulation (do not change)
 max_time_steps = int(time_max/delta_t)   # Nb of max time steps in simulation.
 step_length = np.sqrt(6*diff_coef*delta_t)  # Step length (cm) of random walk
+print('Step length is defined as:', step_length, ' cm')
 # Based on Erban and Chapman 2007:
 prob_absorb_hya = (np.sqrt(delta_t) *
                    (perm_param_hya*np.sqrt(np.pi))/(2*np.sqrt(diff_coef)))
@@ -53,7 +55,13 @@ if record_positions:
     rho_list = np.ndarray(shape=(n_particles, max_time_steps))
     theta_list = np.ndarray(shape=(n_particles, max_time_steps))
     phi_list = np.ndarray(shape=(n_particles, max_time_steps))
+    dtheta_list = np.ndarray(shape=(n_particles, max_time_steps))
+    dphi_list = np.ndarray(shape=(n_particles, max_time_steps))
+    t_list = np.ndarray(shape=(n_particles, max_time_steps))
 
+if record_collision_pt:
+    coll_pt_list = np.ndarray(shape=(n_particles, max_time_steps, 3))
+    print(np.shape(coll_pt_list))
 
 # Initialisation of array collecting membrane where particle exited
 # If exited through hya: 0
@@ -68,6 +76,11 @@ for i in range(n_particles):
         rho_list_i = np.empty(max_time_steps)   # Array of radial distances
         theta_list_i = np.empty(max_time_steps)   # Array of azimuthal angles
         phi_list_i = np.empty(max_time_steps)   # Array of polar angles visited
+        dtheta_list_i = np.empty(max_time_steps)
+        dphi_list_i = np.empty(max_time_steps)
+        t_list_i = np.empty(max_time_steps)
+    if record_collision_pt:
+        coll_pt_list_i = np.empty(shape=(max_time_steps, 3))
 
     # Initial position of particle
     rho = rho0
@@ -78,15 +91,21 @@ for i in range(n_particles):
         rho_list_i[0] = rho0
         theta_list_i[0] = theta0
         phi_list_i[0] = phi0
+        t_list_i[0] = 0
 
     # Setting time step counter to first time step
     t = delta_t
     t_index = 1
 
     while t < time_max:
+        if record_positions:
+            t_list_i[t_index] = t
         # Sampling random angles for variation of theta and phi
-        d_theta = (np.random.uniform() * (2 * np.pi)) + 1e-14
-        d_phi = (np.random.uniform() * (np.pi)) + 1e-14
+        d_theta = (np.random.uniform() * (2 * np.pi))
+        d_phi = (np.random.uniform() * (np.pi))
+        if record_positions:
+            dtheta_list_i[t_index-1] = d_theta
+            dphi_list_i[t_index - 1] = d_phi
 
         # Calculating current cartesian position:
         x1 = rho*np.sin(phi)*np.cos(theta)
@@ -104,16 +123,24 @@ for i in range(n_particles):
 
         if rhot > sphere_radius:  # If the particle hits the boundary at time t
             if phit < phi_lens:  # Lens region
-                [rhot, thetat, phit] = reflect((rho, theta, phi),
-                                               (rhot, thetat, phit),
-                                               sphere_radius)
+                [[rho_r, theta_r, phi_r], p, err] = reflect((rho, theta, phi),
+                                                            (rhot, thetat, phit),
+                                                            sphere_radius)
+
+                if err:
+                    print('particle:', i+1, 't:', t, 'rhot', rho_r, 'thetat', theta_r, 'phit', phi_r)
+                [rhot, thetat, phit] = [rho_r, theta_r, phi_r]
+                if record_collision_pt:
+                    coll_pt_list_i[t_index] = p
+
             elif phi_lens <= phit <= phi_ilm:  # Region of hyaloid membrane
-                print('shoulnt be here')
                 random_num = np.random.uniform()
                 if random_num >= prob_absorb_hya:  # Reflected
-                    [rhot, thetat, phit] = reflect((rho, theta, phi),
-                                                   (rhot, thetat, phit),
-                                                   sphere_radius)
+                    print('shoulnt be here')
+                    [rho_r, theta_r, phi_r] = reflect((rho, theta, phi),
+                                                      (rhot, thetat, phit),
+                                                      sphere_radius)[0]
+                    [rhot, thetat, phit] = [rho_r, theta_r, phi_r]
                 else:   # Absorbed
                     fpt_list[i] = t  # Record fpt in the list for particle i
                     exit_point[i] = 0  # Records particle exited through hya
@@ -128,6 +155,9 @@ for i in range(n_particles):
                             rho_list_i[t_after] = np.nan
                             theta_list_i[t_after] = np.nan
                             phi_list_i[t_after] = np.nan
+                    if record_collision_pt:
+                        for t_after in range(t_index+1, max_time_steps):
+                            coll_pt_list_i[t_after] = np.nan
                     break
             elif phit > phi_ilm:  # Region of ILM
                 random_num = np.random.uniform()
@@ -148,9 +178,16 @@ for i in range(n_particles):
                             rho_list_i[t_after] = np.nan
                             theta_list_i[t_after] = np.nan
                             phi_list_i[t_after] = np.nan
+                    if record_collision_pt:
+                        for t_after in range(t_index+1, max_time_steps):
+                            coll_pt_list_i[t_after] = np.nan
                     break
             else:
                 print('shouldnt come here')
+
+        else: #if not hit boundary
+            if record_collision_pt:
+                coll_pt_list_i[t_index] = np.nan
 
         # Recording position
         if record_positions:
@@ -174,6 +211,24 @@ for i in range(n_particles):
         rho_list[i, :] = rho_list_i
         theta_list[i, :] = theta_list_i
         phi_list[i, :] = phi_list_i
+        dphi_list[i,:] = dphi_list_i
+        dtheta_list[i,:] = dtheta_list_i
+        t_list[i,:] = t_list_i
+
+    if record_collision_pt:
+        coll_pt_list[i,:] = coll_pt_list_i
+
+    if record_positions:
+        df_positions = pd.DataFrame({'Time': t_list[i],
+                                     'Rho': rho_list[i],
+                                     'Theta': theta_list[i],
+                                     'Phi': phi_list[i],
+                                     'd_Theta': dtheta_list[i],
+                                     'd_Phi': dphi_list[i]})
+        df_positions.dropna(inplace=True)
+        df_positions.to_csv('data/positions/particle'+f'{i+1}' +
+                            '_positions_geomB_26-01-2023_test.csv')
+        del df_positions
 
 end = time.time()
 print('Time elapsed (s):', end - start)
@@ -182,14 +237,23 @@ print('Time elapsed (s):', end - start)
 # Saving the information
 df = pd.DataFrame({'#Fpt': fpt_list,
                    '#Exit point (0:hya and 1:ilm)': exit_point})
-df.to_csv("data/fpt_array_geomB_25-01-2023_deltat0.02.csv", index=False)
+df.to_csv("data/fpt_array_geomB_27-01-2023_deltat0.01_tests.csv", index=False)
 
 if record_positions:
     for i in range(0, len(fpt_list)):
         df_positions = pd.DataFrame({'Rho': rho_list[i],
                                      'Theta': theta_list[i],
-                                     'Phi': phi_list[i]})
+                                     'Phi': phi_list[i],
+                                     'd_Theta': dtheta_list[i],
+                                     'd_Phi': dphi_list[i]})
         df_positions.dropna(inplace=True)
         df_positions.to_csv('data/positions/particle'+f'{i+1}' +
-                            '_positions_geomB_25-01-2023.csv')
+                            '_positions_geomB_26-01-2023_test.csv')
         del df_positions
+
+if record_collision_pt:
+    for i in range(0, len(fpt_list)):
+        df_coll_pts = pd.DataFrame(coll_pt_list[i], columns=['rho_c', 'theta_c', 'phi_c'])
+        df_coll_pts.dropna(inplace=True)
+        df_coll_pts.to_csv('data/collision_points/particle'+f'{i+1}' +
+                            '_collision_pts_geomB_26-01-2023.csv')
