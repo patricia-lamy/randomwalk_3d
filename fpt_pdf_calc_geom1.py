@@ -31,7 +31,7 @@ perm_param_hya = 1
 
 # Initialisation for simulations
 time_max = 1500  # Time (in h) when the simulation stops
-delta_t = 0.01  # Time step length (h)
+delta_t = 0.1  # Time step length (h)
 
 # Corresponding variables for the simulation (do not change)
 max_time_steps = int(time_max/delta_t)   # Nb of max time steps in simulation.
@@ -237,7 +237,7 @@ print('Time elapsed (s):', end - start)
 # Saving the information
 df = pd.DataFrame({'#Fpt': fpt_list,
                    '#Exit point (0:hya and 1:ilm)': exit_point})
-df.to_csv("data/fpt_array_geomB_27-01-2023_deltat0.01_tests.csv", index=False)
+df.to_csv("data/fpt_array_geomB_30-01-2023_deltat0.1.csv", index=False)
 
 if record_positions:
     for i in range(0, len(fpt_list)):
