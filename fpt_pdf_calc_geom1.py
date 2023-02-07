@@ -4,7 +4,7 @@ import time
 from fpt_calc_methods import reflect
 
 # We set the random seed
-np.random.seed(42)
+#np.random.seed(42)
 
 # Parameters for outputs wanted
 n_particles = 10000  # Number of simulations
@@ -16,11 +16,13 @@ sphere_radius = 1.02       # Sphere radius, also domain size (cm)
 diff_coef = 3.852e-3       # Diffusion coefficient (cm2/h)
 
 # Angle (rad) defining the lens radius (from the top of the geometry):
-phi_lens = np.pi - 2.6  # =0 if Geom 0
+#phi_lens = np.pi - 2.6  # =0 if Geom 0
+phi_lens = 0.9
 
 # Angle (rad) defining the intersection of the hyaloid membrane with the ILM
 # (from the top of the geometry):
 phi_ilm = np.pi - 2.2
+phi_ilm = np.pi
 
 # Permeability parameters:
 perm_param_hya = 0.04284   # cm/h, permeability parameter for hyaloid membrane
@@ -31,7 +33,7 @@ perm_param_hya = 1
 
 # Initialisation for simulations
 time_max = 1500  # Time (in h) when the simulation stops
-delta_t = 0.1  # Time step length (h)
+delta_t = 0.01  # Time step length (h)
 
 # Corresponding variables for the simulation (do not change)
 max_time_steps = int(time_max/delta_t)   # Nb of max time steps in simulation.
@@ -227,7 +229,7 @@ for i in range(n_particles):
                                      'd_Phi': dphi_list[i]})
         df_positions.dropna(inplace=True)
         df_positions.to_csv('data/positions/particle'+f'{i+1}' +
-                            '_positions_geomB_26-01-2023_test.csv')
+                            '_positions_geomB_31-01-2023_lens_symmetry.csv')
         del df_positions
 
 end = time.time()
@@ -237,19 +239,7 @@ print('Time elapsed (s):', end - start)
 # Saving the information
 df = pd.DataFrame({'#Fpt': fpt_list,
                    '#Exit point (0:hya and 1:ilm)': exit_point})
-df.to_csv("data/fpt_array_geomB_30-01-2023_deltat0.1.csv", index=False)
-
-if record_positions:
-    for i in range(0, len(fpt_list)):
-        df_positions = pd.DataFrame({'Rho': rho_list[i],
-                                     'Theta': theta_list[i],
-                                     'Phi': phi_list[i],
-                                     'd_Theta': dtheta_list[i],
-                                     'd_Phi': dphi_list[i]})
-        df_positions.dropna(inplace=True)
-        df_positions.to_csv('data/positions/particle'+f'{i+1}' +
-                            '_positions_geomB_26-01-2023_test.csv')
-        del df_positions
+df.to_csv("data/fpt_array_geomB_philens0.9_31-01-2023_deltat0.01.csv", index=False)
 
 if record_collision_pt:
     for i in range(0, len(fpt_list)):
