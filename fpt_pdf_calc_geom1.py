@@ -14,21 +14,15 @@ sphere_radius = 1.02       # Sphere radius, also domain size (cm)
 diff_coef = 3.852e-3       # Diffusion coefficient (cm2/h)
 
 # Angle (rad) defining the lens radius (from the top of the geometry):
-phi_lens = np.pi - 2.6  # =0 if Geom 0
-phi_lens = 0  # Geom Z, no reflective
+phi_lens = np.pi - 2.6
 
 # Angle (rad) defining the intersection of the hyaloid membrane with the ILM
 # (from the top of the geometry):
 phi_ilm = np.pi - 2.2
-#phi_ilm = np.pi
 
 # Permeability parameters:
-perm_param_hya = 2*0.06876  # cm/h, permeability parameter for hyaloid membrane
-perm_param_ilm = 2*6.516e-4  # cm/h, permeability parameter for ILM
-perm_param_ilm = perm_param_hya # Geom Z
-# Supposing that semi-permeable are fully absorbing for now:
-#perm_param_ilm = 1
-#perm_param_hya = 1
+perm_param_hya = 0.06876  # cm/h, permeability parameter for hyaloid membrane
+perm_param_ilm = 6.516e-4  # cm/h, permeability parameter for ILM
 
 # Initialisation for simulations
 time_max = 1500  # Time (in h) when the simulation stops
@@ -40,9 +34,9 @@ step_length = np.sqrt(6*diff_coef*delta_t)  # Step length (cm) of random walk
 print('Step length is defined as:', step_length, ' cm')
 # Based on Erban and Chapman 2007:
 prob_absorb_hya = (np.sqrt(delta_t) *
-                   (perm_param_hya*np.sqrt(np.pi))/(2*np.sqrt(diff_coef)))
+                   (perm_param_hya*np.sqrt(np.pi))/(np.sqrt(diff_coef)))
 prob_absorb_ilm = (np.sqrt(delta_t) *
-                   (perm_param_ilm*np.sqrt(np.pi))/(2*np.sqrt(diff_coef)))
+                   (perm_param_ilm*np.sqrt(np.pi))/(np.sqrt(diff_coef)))
 
 # Initial position: center of the sphere
 rho0 = 0
@@ -143,4 +137,4 @@ print('Time elapsed (s):', end - start)
 # Saving the information
 df = pd.DataFrame({'#Fpt': fpt_list,
                    '#Exit point (0:hya and 1:ilm)': exit_point})
-df.to_csv("data/fpt_array_geomZ2_14-02-2023_deltat0.001.csv", index=False)
+df.to_csv("data/fpt_array_geomD_14-02-2023_deltat0.001.csv", index=False)
